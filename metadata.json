@@ -1,0 +1,7 @@
+{
+  "name": "MaraCash",
+  "description": "Sistema de Cashback e Fidelização do Estado do Maranhão. Acumule benefícios em lojas parceiras.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

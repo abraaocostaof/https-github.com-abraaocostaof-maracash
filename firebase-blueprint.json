@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for clients, merchants, and admins.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["client", "merchant", "admin"] },
+        "cpf": { "type": "string" },
+        "phone": { "type": "string" },
+        "birthDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "blocked", "pending"] },
+        "level": { "type": "string", "enum": ["bronze", "silver", "gold"] },
+        "totalCashback": { "type": "number" },
+        "availableCashback": { "type": "number" },
+        "referralCode": { "type": "string" },
+        "referredBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Store": {
+      "title": "Store",
+      "description": "Merchant store details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "name": { "type": "string" },
+        "razaoSocial": { "type": "string" },
+        "cnpj": { "type": "string" },
+        "cashbackPct": { "type": "number" },
+        "logoURL": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "object" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerUid", "name", "cnpj", "cashbackPct"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "NFC-e receipt registration.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "accessKey": { "type": "string" },
+        "value": { "type": "number" },
+        "emissionDate": { "type": "string", "format": "date" },
+        "submissionDate": { "type": "string", "format": "date-time" },
+        "clientUid": { "type": "string" },
+        "storeId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "expired"] },
+        "cashbackPct": { "type": "number" },
+        "rejectionReason": { "type": "string" }
+      },
+      "required": ["id", "accessKey", "value", "clientUid", "storeId", "status"]
+    },
+    "Cashback": {
+      "title": "Cashback",
+      "description": "Cashback transaction record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientUid": { "type": "string" },
+        "invoiceId": { "type": "string" },
+        "storeId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["local", "global"] },
+        "status": { "type": "string", "enum": ["pending", "available", "used", "expired"] },
+        "availableAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clientUid", "amount", "type", "status"]
+    },
+    "OTP": {
+      "title": "OTP",
+      "description": "One-time password for cashback redemption.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientUid": { "type": "string" },
+        "code": { "type": "string" },
+        "amount": { "type": "number" },
+        "storeId": { "type": "string" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "used": { "type": "boolean" }
+      },
+      "required": ["id", "clientUid", "code", "expiresAt", "used"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "User", "description": "User profiles." },
+    "/stores/{storeId}": { "schema": "Store", "description": "Stores registered in the system." },
+    "/invoices/{invoiceId}": { "schema": "Invoice", "description": "Registered receipts." },
+    "/cashbacks/{cashbackId}": { "schema": "Cashback", "description": "Cashback records." },
+    "/otps/{otpId}": { "schema": "OTP", "description": "OTP codes for redemption." }
+  }
+}

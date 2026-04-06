@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid, email, role, status, availableCashback, totalCashback, ...
+    //
+    // Collection: stores
+    // Fields: id, ownerUid, name, cnpj, status, cashbackPct, ...
+    //
+    // Collection: invoices
+    // Fields: id, accessKey, value, clientUid, storeId, status, ...
+    //
+    // Collection: otps
+    // Fields: id, clientUid, code, amount, expiresAt, used, ...
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "karmy.KN@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isMerchant() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'merchant';
+    }
+
+    function isClient() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'client';
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['client', 'merchant', 'admin'];
+    }
+
+    function isValidStore(data) {
+      return data.keys().hasAll(['id', 'ownerUid', 'name', 'cnpj', 'cashbackPct']) &&
+             data.id is string &&
+             data.ownerUid is string &&
+             data.name is string &&
+             data.cnpj is string &&
+             data.cashbackPct is number;
+    }
+
+    function isValidInvoice(data) {
+      return data.keys().hasAll(['id', 'accessKey', 'value', 'clientUid', 'storeId', 'status']) &&
+             data.id is string &&
+             data.accessKey is string &&
+             data.value is number &&
+             data.clientUid is string &&
+             data.storeId is string &&
+             data.status in ['pending', 'approved', 'rejected', 'expired'];
+    }
+
+    function isValidOTP(data) {
+      return data.keys().hasAll(['id', 'clientUid', 'code', 'expiresAt', 'used']) &&
+             data.id is string &&
+             data.clientUid is string &&
+             data.code is string &&
+             data.expiresAt is string &&
+             data.used is bool;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+    }
+
+    match /stores/{storeId} {
+      allow read: if isAuthenticated();
+      allow create: if isMerchant() && isValidStore(request.resource.data);
+      allow update: if isAdmin() || (isAuthenticated() && request.resource.data.ownerUid == resource.data.ownerUid);
+    }
+
+    match /invoices/{invoiceId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.clientUid || isAdmin() || (isMerchant() && request.auth.uid == get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerUid));
+      allow create: if isClient() && isValidInvoice(request.resource.data);
+      allow update: if isAdmin() || (isMerchant() && request.auth.uid == get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerUid);
+    }
+
+    match /otps/{otpId} {
+      allow read: if isAuthenticated();
+      allow create: if isClient() && isValidOTP(request.resource.data);
+      allow update: if isAdmin() || isMerchant();
+    }
+
+    match /cashbacks/{cashbackId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.clientUid || isAdmin());
+      allow create: if isAdmin() || isMerchant();
+      allow update: if isAdmin();
+    }
+  }
+}
